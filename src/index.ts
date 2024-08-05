@@ -87,7 +87,6 @@ app.get('/pdf-to-png', (req, res) => {
   //   })
   //   .findIn('invoice number: 430 for client 0bc456 on : 12/12/2003')
   //   .get('data');
-  log(regex);
   res.send(regex);
 });
 

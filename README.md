@@ -24,13 +24,13 @@ const regex = new RegexHelper({
   regex: `${EUFullDate}`,
   // the name of your regex
   name: 'fullDate',
-  // text to display if no value found
+  // text to display if no value has been found
   valueIfNotFound: 'Date not found',
 })
   .query({
     regex: `(?:service|article) :? (${anyDigits})`,
     name: 'articleOrService',
-    // this will capture a value of the first group (index: 1)
+    // this will capture the value of the first group (index: 1)
     capturingGroup: [{ name: 'articleNumber', index: 1 }],
   })
   .query({
