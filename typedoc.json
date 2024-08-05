@@ -1,0 +1,17 @@
+{
+  "entryPoints": ["src/index.ts"],
+  "projectDocuments": ["./pitfalls.md"],
+  "out": "docs",
+  "exclude": ["**/__tests__/**", "**/*.spec.ts", "**/node_modules/**"],
+  "includeVersion": true,
+  "name": "regex-helper",
+  "lang": "en",
+  "excludeExternals": true,
+  "excludeInternal": true,
+
+  "plugin": ["typedoc-github-theme"],
+  "theme": "typedoc-github-theme",
+
+  "disableSources": true,
+  "hideGenerator": true
+}
