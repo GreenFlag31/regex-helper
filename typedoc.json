@@ -9,8 +9,8 @@
   "excludeExternals": true,
   "excludeInternal": true,
 
-  "plugin": ["typedoc-github-theme"],
-  "theme": "typedoc-github-theme",
+  "plugin": ["typedoc-material-theme"],
+  "themeColor": "#cb9820",
 
   "disableSources": true,
   "hideGenerator": true

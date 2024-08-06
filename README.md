@@ -1,6 +1,6 @@
 # Regex-helper
 
-A lightweight JavaScript library that helps structure regex quickly and easily. This library does not replace learning regex but assists in their usage. This library removes the concrete implementation of regex and focus on results.
+A lightweight JavaScript library that helps structure regex quickly and easily. This library does not replace learning regex but assists in their usage by removing the concrete implementation of regex and focus on results instead.
 
 ## Getting started
 
@@ -36,10 +36,11 @@ const regex = new RegexHelper({
   .query({
     regex: `has been paid`,
     name: 'isPaid',
-    // search only for presence (returns a boolean string, "true" | "false")
+    // test only for presence (returns a boolean string, "true" | "false")
     test: true,
   })
   .findIn('The article: 471 has been paid on 12/12/2022.')
+  // 'data' | 'debug' | 'general'
   .get('data');
 ```
 

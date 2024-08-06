@@ -6,6 +6,7 @@ import {
   QueryRegexData,
   CapturingGroup,
   CapturingGroupWithResult,
+  General,
 } from './types';
 const DEFAULT_VALUE = 'not found';
 
@@ -24,15 +25,17 @@ const defaultOptions: Options = { spacing: { optional: true }, flags: 'i' };
  * Allow you to build regex easily by providing your options.
  * @example
  * ```javascript
- * const results = new RegexHelper({
- *  regex: `${EUFullDate}`,
- *  name: "EUFullDate",
+ * const regex = new RegexHelper({
+ *    regex: `${EUFullDate}`,
+ *    name: 'EUFullDate',
  * })
- *  .query({ regex: `service|article :? (${mandatFormatNumber})`,
- *    name: "articleOrService",
- *    capturingGroup: [{ name: "articleNumber", index: 1 },
- *  ]})
- *  .findIn("The article: 471 has been paid on 12/12/2022");
+ *   .query({
+ *      regex: `service|article :? (${anyDigits})`,
+ *      name: 'articleOrService',
+ *      capturingGroup: [{ name: 'articleNumber', index: 1 }],
+ *   })
+ *   .findIn('The article: 471 has been paid on 12/12/2022')
+ *   .get('data');
  *  ```
  *
  * Get help on: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Regular_expressions
@@ -43,7 +46,7 @@ const defaultOptions: Options = { spacing: { optional: true }, flags: 'i' };
 export class RegexHelper {
   private regexResults: QueryRegexDataWithSubQuery[] = [];
   private currentRegexIndex = 0;
-  private success = 0;
+  private success: General['success']['name'] = [];
 
   constructor(
     private readonly regexAndName = defaultRegexInit,
@@ -87,7 +90,8 @@ export class RegexHelper {
     const currentSubQuery = currentRegex.subQuery[subQueryIteration];
     value = this.setDefaultValueIfNotFound(
       value,
-      subQuery ? currentSubQuery.valueIfNotFound : currentRegex.valueIfNotFound
+      subQuery ? currentSubQuery.valueIfNotFound : currentRegex.valueIfNotFound,
+      subQuery ? currentSubQuery.name : currentRegex.name
     );
 
     if (subQuery) {
@@ -127,7 +131,7 @@ export class RegexHelper {
       );
     }
 
-    this.success = 0;
+    this.success = [];
     this.toRegex(text);
     this.trimTextHandlerAndTransformRegexToString();
     return this;
@@ -140,7 +144,7 @@ export class RegexHelper {
    *
    * data: displays only the results. Returns only the results of the regex under the form of key value pairs.
    *
-   * general: displays a general overview. Returns the number of successfull matches, fails, and total.
+   * general: displays a general overview. Returns the number of successfull matches, fails, and total and their respective regex names.
    */
   get(info: 'debug' | 'data' | 'general') {
     if (info === 'data') return this.returnOnlyData();
@@ -150,8 +154,31 @@ export class RegexHelper {
 
   private getGeneralInfos() {
     const data = this.returnOnlyData();
-    const total = Object.keys(data).length;
-    return { success: this.success, failed: total - this.success, total };
+    const allRegex = Object.keys(data);
+    const total = allRegex.length;
+    const success = this.success.length;
+    const fails: string[] = [];
+
+    for (const regex of allRegex) {
+      if (!this.success.includes(regex)) fails.push(regex);
+    }
+
+    const general: General = {
+      success: {
+        count: success,
+        name: this.success,
+      },
+      fails: {
+        count: fails.length,
+        name: fails,
+      },
+      total: {
+        count: total,
+        name: allRegex,
+      },
+    };
+
+    return general;
   }
 
   private returnOnlyData() {
@@ -207,15 +234,15 @@ export class RegexHelper {
       for (const regexResult of this.regexResults) {
         subQueryIndex = 0;
         const { flags, regex } = regexResult;
-        const newRegex = new RegExp(regex, flags);
-        regexResult.regex = newRegex;
-        this.matchOrTestRegex(regexResult, text, newRegex);
+        const mainRegex = new RegExp(regex, flags);
+        regexResult.regex = mainRegex;
+        this.matchOrTestRegex(regexResult, text, mainRegex);
 
         for (const subQueryContainer of regexResult.subQuery) {
           const { flags, regex, reference } = subQueryContainer;
-          const newRegex = new RegExp(regex, flags);
-          subQueryContainer.regex = newRegex;
-          this.matchOrTestRegex(regexResult, reference, newRegex, subQueryIndex);
+          const subRegex = new RegExp(regex, flags);
+          subQueryContainer.regex = subRegex;
+          this.matchOrTestRegex(subQueryContainer, reference, subRegex, subQueryIndex);
           subQueryIndex += 1;
         }
 
@@ -233,11 +260,10 @@ export class RegexHelper {
     regex: RegExp,
     subQueryIndex = -1
   ) {
-    const { flags } = regexResult;
+    const { flags, test } = regexResult;
     let result = reference.match(regex);
 
-    // ajouter stop si capture ou sub et pas update
-    if (regexResult.test) {
+    if (test) {
       const isPresent = regex.test(reference);
       result = [isPresent.toString()];
     }
@@ -251,11 +277,14 @@ export class RegexHelper {
 
   private setDefaultValueIfNotFound(
     currentValue: string | RegExpMatchArray | undefined | null,
-    customDefaultValue: string | undefined
+    customDefaultValue: string | undefined,
+    currentRegexName: string
   ) {
-    if (Array.isArray(currentValue) && currentValue.length > 0) this.success += 1;
-    else if (!Array.isArray(currentValue) && currentValue) this.success += 1;
-    else currentValue = customDefaultValue ?? DEFAULT_VALUE;
+    if (Array.isArray(currentValue) && currentValue.length > 0) {
+      this.success.push(currentRegexName);
+    } else if (!Array.isArray(currentValue) && currentValue) {
+      this.success.push(currentRegexName);
+    } else currentValue = customDefaultValue ?? DEFAULT_VALUE;
 
     return currentValue;
   }
@@ -265,17 +294,25 @@ export class RegexHelper {
     result: RegExpMatchArray | null
   ) {
     const capturingGroup = regexResult.capturingGroup || [];
-    const { flags, name } = regexResult;
+    const { flags, name, test } = regexResult;
     if (flags.includes('g') && capturingGroup.length) {
       console.warn(
         `<RegexHelper>: \x1b[31mCannot update capture group with the global flag at Regex: ${name}. Remove the global flag to use capture group.\x1b[0m`
       );
+    } else if (test && capturingGroup.length) {
+      console.warn(
+        `<RegexHelper>: \x1b[31mCannot update capture group with the testing option enabled at Regex: ${name}. Remove the testing option to use capture group.\x1b[0m`
+      );
     }
 
     for (const group of capturingGroup) {
-      const { index } = group;
+      const { index, name } = group;
       const currentValue = flags.includes('g') ? '' : result?.[index];
-      const value = this.setDefaultValueIfNotFound(currentValue, group.valueIfNotFound) as string;
+      const value = this.setDefaultValueIfNotFound(
+        currentValue,
+        group.valueIfNotFound,
+        name
+      ) as string;
       group.result = value;
     }
   }
@@ -333,17 +370,16 @@ export class RegexHelper {
   }
 
   /**
-   * Allow you to perform a subQuery, identical to a new query. A subQuery belongs to a query and is generally used to perform a new query based the result of its parent query. A query can have zero to unlimited subQueries.
+   * Allow you to perform a subQuery, identical to a new query. A subQuery belongs to a query and is generally used to perform a new query based the result of its parent query. SubQueries can form a chain of more complex queries. A query can have zero to unlimited subQueries.
    * @example
    * ```javascript
    * const regex = new RegexHelper({
-   *   regex: `${EUFullDate}`,
-   *   name: 'fullDate',
-   *   updateNextSubQuery: false,
+   *   regex: `invoice number: ${anyDigits}`,
+   *   name: 'invoice',
    * })
    *  .subQuery({
-   *    regex: `invoice number :? ${anyDigits}`,
-   *    name: 'invoice',
+   *    regex: `${anyDigits}$`,
+   *    name: 'invoiceNumber',
    *  })
    * .findIn('invoice number: 430 for client 0bc456 on : 12/12/2003')
    * .get('data');

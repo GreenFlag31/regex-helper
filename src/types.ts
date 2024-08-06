@@ -2,9 +2,18 @@
  * The data returned when info is set to "general" in the get class method. This allows you to have a general overview about the successfull regex, fails and total.
  */
 export interface General {
-  success: number;
-  failed: number;
-  total: number;
+  success: {
+    count: number;
+    name: string[];
+  };
+  fails: {
+    count: number;
+    name: string[];
+  };
+  total: {
+    count: number;
+    name: string[];
+  };
 }
 
 /**
@@ -14,7 +23,7 @@ export interface Options {
   spacing?: {
     /**
      * Optional spacing.
-     * @defaultValue true.
+     * @defaultValue true
      */
     optional?: boolean;
     /**
@@ -24,7 +33,7 @@ export interface Options {
   };
   /**
    * Flags of the regex. Possible flags are 'g' | 'i' | 'm' | 's' | 'u' | 'y'.
-   * @defaultValue 'i' (insensitive).
+   * @defaultValue 'i' (insensitive)
    */
   flags?: string;
 }
@@ -33,12 +42,12 @@ export interface QueryRegexData {
   result: string | RegExpMatchArray;
   regex: string | RegExp;
   flags: string;
-  [name: string]: any;
+  name: string;
   test?: boolean;
   reference: string;
   capturingGroup?: CapturingGroupWithResult[];
   updateNextSubQuery?: boolean;
-  valueIfNotFound?: string;
+  valueIfNotFound?: any;
 }
 
 export interface QueryRegexDataWithSubQuery extends QueryRegexData {
@@ -51,6 +60,9 @@ export interface QueryRegexDataWithSubQuery extends QueryRegexData {
 export interface RegexInit {
   /**
    * The regex that will be used. Use a dubble "\\" because "\\" is an escaping character.
+   * @example
+   * // 'invoice type: classic, number: 4791
+   * regex: `invoice type: \\w+, number: \\d+`
    */
   regex: string;
   /**
@@ -59,24 +71,24 @@ export interface RegexInit {
   name: string;
   /**
    * The regex should only be tested for presence of a substring. Will return a boolean string.
-   * @defaultValue false.
+   * @defaultValue false
    */
   test?: boolean;
   /**
-   * Use group to capture substrings in your regex. Please note that capturing group does not work with the 'g' flag.
-   * @defaultValue [].
+   * Use group to capture substrings in your regex. Please note that capturing group does not work with the global flag enabled (g).
+   * @defaultValue []
    */
   capturingGroup?: CapturingGroup[];
   /**
    * Update the next subQuery with the result of the current query.
-   * @defaultValue true.
+   * @defaultValue true
    */
   updateNextSubQuery?: boolean;
   /**
    * Text to be displayed if no result are found.
-   * @defaultValue "not found".
+   * @defaultValue "not found"
    */
-  valueIfNotFound?: string;
+  valueIfNotFound?: any;
 }
 
 export interface CapturingGroupWithResult extends CapturingGroup {
@@ -94,7 +106,7 @@ export interface CapturingGroup {
   name: string;
   /**
    * Text to be displayed if no result are found.
-   * @defaultValue "not found".
+   * @defaultValue "not found"
    */
-  valueIfNotFound?: string;
+  valueIfNotFound?: any;
 }

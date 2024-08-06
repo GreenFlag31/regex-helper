@@ -51,31 +51,20 @@ const text = `The article: 471 has been paid on 12/12/2022. This message has bee
 
 app.get('/pdf-to-png', (req, res) => {
   const regex = new RegexHelper({
-    // pre build regex (dd/mm/yyyy)
     regex: `${EUFullDate}`,
-    // the name of your regex
-    name: 'fullDate',
-    // text to display if no value found
-    valueIfNotFound: 'Date not found',
+    name: 'EUFullDate',
   })
     .query({
-      regex: `(?:service|article) :? (${anyDigits})`,
+      regex: `service|article :? (${anyDigits})`,
       name: 'articleOrService',
-      // this will capture a value of the first group (index: 1)
       capturingGroup: [{ name: 'articleNumber', index: 1 }],
     })
-    .query({
-      regex: `has been paid`,
-      name: 'isPaid',
-      // search only for presence (returns a boolean string, "true" | "false")
-      test: true,
-    })
-    .findIn('The article: 471 has been paid on 12/12/2022.')
-    .get('data');
+    .findIn('The article: 471 has been paid on 12/12/2022')
+    .get('debug');
   // const regex = new RegexHelper({
   //   regex: `${EUFullDate}`,
   //   name: 'fullDate',
-  //   updateNextSubQuery: false,
+  //   updateNextSubQuery: false,test:true
   // })
   //   .subQuery({
   //     regex: `invoice number :? ${anyDigits}`,
@@ -86,7 +75,6 @@ app.get('/pdf-to-png', (req, res) => {
   //     name: 'invoiceNumber',
   //   })
   //   .findIn('invoice number: 430 for client 0bc456 on : 12/12/2003')
-  //   .get('data');
   res.send(regex);
 });
 

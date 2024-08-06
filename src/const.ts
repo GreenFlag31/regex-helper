@@ -8,6 +8,9 @@ export const wordBoundary = '\\b';
 export const nonWordBoundary = '\\B';
 export const spacings = '\\s+';
 export const optionalSpacings = '\\s*';
+/**
+ * This library comes with a serie of pre defined regex. Check if they are fitting your needs.
+ */
 export const EUFullDate = '[0-9]{2}/[0-9]{2}/[0-9]{4}';
 export const USFullDate = '[0-9]\\{4\\}-[0-9]\\{2\\}-[0-9]\\{2\\}';
 export const EUFullDateWithDashes = '[0-9]{2}-[0-9]{2}-[0-9]{4}';
