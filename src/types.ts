@@ -22,12 +22,12 @@ export interface General {
 export interface Options {
   spacing?: {
     /**
-     * Optional spacing.
+     * Optional spacing between words.
      * @defaultValue true
      */
     optional?: boolean;
     /**
-     * Allow you to define a custom spacing.
+     * Allow you to define a custom spacing between words.
      */
     custom?: string;
   };

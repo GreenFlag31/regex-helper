@@ -4,9 +4,11 @@ import {
   amount,
   anyDigit,
   anyDigits,
+  anyWords,
   emailAdress,
   EUFullDate,
   EUFullDateWithDashes,
+  phoneNumber,
   URLSchema,
 } from './const';
 import { RegexHelper } from './regex-helper';
@@ -47,7 +49,7 @@ export { RegexHelper } from './regex-helper';
 
 const app = express();
 
-const text = `The article: 471 has been paid on 12/12/2022. This message has been sent to email@email.com and test@test.com. Payment was made via credit card number 1234 5678 9012 3456. The total amount was $123.45. You can view your order history at https://example.com/orders. Service type: ordinary, number: 12345, phone: +49 123 45 65 78.`;
+const text = `The article: 471 has been paid on 12/12/2022. This message has been sent to email@email.com and test@test.com. Payment was made via credit card number 1234 5678 9012 3456. The total amount was $123.45. You can view your order history at https://example.com/orders. Service type: ordinary, number: 12345, phone: +49123456578.`;
 
 app.get('/pdf-to-png', (req, res) => {
   const regex = new RegexHelper({
@@ -55,12 +57,29 @@ app.get('/pdf-to-png', (req, res) => {
     name: 'EUFullDate',
   })
     .query({
-      regex: `service|article :? (${anyDigits})`,
+      regex: `Service type: ${anyWords}, number: ${anyDigits}, phone: ${phoneNumber}.`,
       name: 'articleOrService',
-      capturingGroup: [{ name: 'articleNumber', index: 1 }],
     })
-    .findIn('The article: 471 has been paid on 12/12/2022')
-    .get('debug');
+    .subQuery({
+      regex: `Service type: (${anyWords})`,
+      name: 'anyWords',
+      updateNextSubQuery: false,
+      capturingGroup: [{ name: 'word', index: 1 }],
+    })
+    .subQuery({
+      regex: `number: (${anyDigits})`,
+      name: 'anyDigits',
+      updateNextSubQuery: false,
+      capturingGroup: [{ name: 'digit', index: 1 }],
+    })
+    .subQuery({
+      regex: `phone: (${phoneNumber})`,
+      name: 'phoneNumber',
+      updateNextSubQuery: false,
+      capturingGroup: [{ name: 'phone', index: 1 }],
+    })
+    .findIn(text)
+    .get('data');
   // const regex = new RegexHelper({
   //   regex: `${EUFullDate}`,
   //   name: 'fullDate',

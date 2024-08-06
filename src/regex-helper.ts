@@ -185,22 +185,29 @@ export class RegexHelper {
     const data: { [key: string]: string | RegExpMatchArray } = {};
 
     for (const result of this.regexResults) {
-      const { name, subQuery } = result;
+      const { name, subQuery, capturingGroup } = result;
       data[name] = result.result;
-      const capturingGroup = result.capturingGroup || [];
 
-      for (const group of capturingGroup) {
-        const { name } = group;
-        data[name] = group.result;
-      }
+      this.displayCapturingGroupResults(data, capturingGroup);
 
       for (const sub of subQuery) {
-        const { name } = sub;
+        const { name, capturingGroup } = sub;
         data[name] = sub.result;
+        this.displayCapturingGroupResults(data, capturingGroup);
       }
     }
 
     return data;
+  }
+
+  private displayCapturingGroupResults(
+    data: { [key: string]: string | RegExpMatchArray },
+    capturingGroup: CapturingGroupWithResult[] | undefined = []
+  ) {
+    for (const group of capturingGroup) {
+      const { name } = group;
+      data[name] = group.result;
+    }
   }
 
   private trimTextHandlerAndTransformRegexToString() {
