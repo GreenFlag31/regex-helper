@@ -10,7 +10,7 @@
   "excludeInternal": true,
 
   "plugin": ["typedoc-material-theme"],
-  "themeColor": "#cb9820",
+  "themeColor": "#F0F8FF",
 
   "disableSources": true,
   "hideGenerator": true

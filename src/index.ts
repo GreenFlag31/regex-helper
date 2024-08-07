@@ -60,40 +60,9 @@ app.get('/pdf-to-png', (req, res) => {
       regex: `Service type: ${anyWords}, number: ${anyDigits}, phone: ${phoneNumber}.`,
       name: 'articleOrService',
     })
-    .subQuery({
-      regex: `Service type: (${anyWords})`,
-      name: 'anyWords',
-      updateNextSubQuery: false,
-      capturingGroup: [{ name: 'word', index: 1 }],
-    })
-    .subQuery({
-      regex: `number: (${anyDigits})`,
-      name: 'anyDigits',
-      updateNextSubQuery: false,
-      capturingGroup: [{ name: 'digit', index: 1 }],
-    })
-    .subQuery({
-      regex: `phone: (${phoneNumber})`,
-      name: 'phoneNumber',
-      updateNextSubQuery: false,
-      capturingGroup: [{ name: 'phone', index: 1 }],
-    })
     .findIn(text)
-    .get('data');
-  // const regex = new RegexHelper({
-  //   regex: `${EUFullDate}`,
-  //   name: 'fullDate',
-  //   updateNextSubQuery: false,test:true
-  // })
-  //   .subQuery({
-  //     regex: `invoice number :? ${anyDigits}`,
-  //     name: 'invoice',
-  //   })
-  //   .subQuery({
-  //     regex: `${anyDigits}$`,
-  //     name: 'invoiceNumber',
-  //   })
-  //   .findIn('invoice number: 430 for client 0bc456 on : 12/12/2003')
+    .get('general');
+
   res.send(regex);
 });
 

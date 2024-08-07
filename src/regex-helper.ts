@@ -122,7 +122,7 @@ export class RegexHelper {
   }
 
   /**
-   * Find results on basis of the provided text. Throws an error if the text is falsy.
+   * Find results on basis of the provided text. Throws an error if the text is falsy or the regex is invalid.
    */
   findIn(text: string) {
     if (!text) {
@@ -140,11 +140,46 @@ export class RegexHelper {
   /**
    * Get the results of your queries.
    *
-   * debug: gives a complete overview of the data. Returns QueryRegexDataWithSubQuery[].
-   *
-   * data: displays only the results. Returns only the results of the regex under the form of key value pairs.
-   *
-   * general: displays a general overview. Returns the number of successfull matches, fails, and total and their respective regex names.
+   * @example
+   debug: gives a complete overview of the data.
+  {
+    "result": "12/12/2022",
+    "regex": "/[0-9]{2}\\/[0-9]{2}\\/[0-9]{4}/i",
+    "flags": "i",
+    "name": "EUFullDate",
+    "reference": "The article: 471 has been paid on 12/12/2022. This message has been sent to email@email.com and test... (text has been trimmed)",
+    "capturingGroup": [],
+    "updateNextSubQuery": true,
+    "subQuery": []
+  },
+  
+   data: displays only the results.
+   {
+    "EUFullDate": "12/12/2022",
+    "articleOrService": "Service type: ordinary, number: 12345, phone: +49123456578."
+   }
+  
+   general: displays a general overview.
+   {
+    "success": {
+      "count": 2,
+      "name": [
+        "EUFullDate",
+        "articleOrService"
+      ]
+    },
+    "fails": {
+      "count": 0,
+      "name": []
+    },
+    "total": {
+      "count": 2,
+      "name": [
+        "EUFullDate",
+        "articleOrService"
+      ]
+    }
+   }
    */
   get(info: 'debug' | 'data' | 'general') {
     if (info === 'data') return this.returnOnlyData();

@@ -39,8 +39,9 @@ const regex = new RegexHelper({
     // test only for presence (returns a boolean string, "true" | "false")
     test: true,
   })
+  // the text where to perform searching
   .findIn('The article: 471 has been paid on 12/12/2022.')
-  // 'data' | 'debug' | 'general'
+  // can be: 'data' | 'debug' | 'general'
   .get('data');
 ```
 
@@ -59,7 +60,7 @@ The regex displays following results:
 
 ## Developer experience
 
-This library comes with a serie of pre build regex. Special attention has been given on developer experience. Properties and methods are exhaustively documented and typed. Use your IDE's autocompletion or hover on properties and methods for help. Errors will be logged in console with explicit messages.
+This library comes with a serie of pre build regex. Special attention has been given on developer experience. Properties and methods are exhaustively documented and typed. Use your IDE's autocompletion or hover on properties and methods for help. Errors (see 'pitfalls' [here](https://greenflag31.github.io/regex-helper/docs/documents/pitfalls.html)) will be logged in console with explicit messages.
 
 ## File a bug, got a new idea, or want to contribute?
 

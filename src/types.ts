@@ -71,7 +71,7 @@ export interface RegexInit {
   name: string;
   /**
    * The regex should only be tested for presence of a substring. Will return a boolean string.
-   * @defaultValue false
+   * @defaultValue "false"
    */
   test?: boolean;
   /**

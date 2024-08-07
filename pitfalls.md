@@ -1,6 +1,6 @@
 # Common pitfalls
 
-Pitfalls arise with the use of methods of antagonistic effects, ie. with the use of the global flag option (g) and the combinaison of another search method or the test option combined with a capture group.
+Pitfalls arise with the use of methods of antagonistic effects, ie. with the use of the global flag option (g) and the combinaison of another search method or the test option combined with a capture group. Errors will be explicitly logged in console.
 
 ## Problem
 
@@ -17,8 +17,9 @@ const regex = new RegexHelper({
       regex: `(?:service|article) :? (${anyDigits})`,
       name: 'articleOrService',
       // It is not possible to use a capture group with global flag option enabled, due to native Regex limitations (with the global flag provided, Javascript would not be able to understand which group to capture since they can be multiple).
-      capturingGroup: [{ name: 'articleNumber', index: 1, valueIfNotFound: 'This cannot work' }],
+      capturingGroup: [{ name: 'articleNumber', index: 1, valueIfNotFound: 'this cannot work' }],
     },
+    // global flag option is enabled
     { flags: 'gi' }
   )
   .query(

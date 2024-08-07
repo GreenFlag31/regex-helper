@@ -6,6 +6,7 @@ export const anyNonDigit = '\\D';
 export const anyNonWord = '\\W';
 export const wordBoundary = '\\b';
 export const nonWordBoundary = '\\B';
+export const spacing = '\\s';
 export const spacings = '\\s+';
 export const optionalSpacings = '\\s*';
 /**
