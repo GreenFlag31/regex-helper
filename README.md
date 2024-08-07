@@ -1,4 +1,4 @@
-# Regex-helper
+# Regex-helper-ease
 
 A lightweight JavaScript library that helps structure regex quickly and easily. This library does not replace learning regex but assists in their usage by removing the concrete implementation of regex and focus on results instead.
 
@@ -9,7 +9,7 @@ A lightweight JavaScript library that helps structure regex quickly and easily. 
 Installation:
 
 ```sh
-npm install regex-helper
+npm install regex-helper-ease
 ```
 
 ## Documentation

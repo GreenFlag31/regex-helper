@@ -4,7 +4,7 @@
   "out": "docs",
   "exclude": ["**/__tests__/**", "**/*.spec.ts", "**/node_modules/**"],
   "includeVersion": true,
-  "name": "regex-helper",
+  "name": "regex-helper-ease",
   "lang": "en",
   "excludeExternals": true,
   "excludeInternal": true,
