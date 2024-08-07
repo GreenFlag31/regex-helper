@@ -1,11 +1,12 @@
 {
   "name": "regex-helper",
   "version": "0.0.1",
-  "description": "Regex helper helper.",
+  "description": "Regex helper",
   "keywords": [
     "Regex",
     "Regex helper",
-    "Regex helper"
+    "Build Regex",
+    "Regex utils"
   ],
   "homepage": "https://github.com/GreenFlag31/regex-helper#readme",
   "bugs": {
