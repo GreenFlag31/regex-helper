@@ -60,7 +60,7 @@ The regex displays following results:
 
 ## Developer experience
 
-This library comes with a serie of pre build regex. Special attention has been given on developer experience. Properties and methods are exhaustively documented and typed. Use your IDE's autocompletion or hover on properties and methods for help. Errors (see 'pitfalls' [here](https://greenflag31.github.io/regex-helper/docs/documents/pitfalls.html)) will be logged in console with explicit messages.
+This library comes with a serie of pre build regex. Special attention has been given on developer experience. Properties and methods are exhaustively documented and typed. Use your IDE's autocompletion or hover on properties and methods for help. Errors (see 'pitfalls' [here](https://greenflag31.github.io/regex-helper/documents/pitfalls.html)) will be logged in console with explicit messages.
 
 ## File a bug, got a new idea, or want to contribute?
 
