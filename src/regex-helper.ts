@@ -181,6 +181,9 @@ export class RegexHelper {
     }
    }
    */
+  get(info: 'data'): { [key: string]: string | RegExpMatchArray };
+  get(info: 'general'): General;
+  get(info: 'debug'): QueryRegexDataWithSubQuery[];
   get(info: 'debug' | 'data' | 'general') {
     if (info === 'data') return this.returnOnlyData();
     if (info === 'general') return this.getGeneralInfos();

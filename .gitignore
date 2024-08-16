@@ -3,7 +3,8 @@ out
 test-results
 .vscode
 
-upload
+
+src/test.ts
 
 # Logs
 logs
