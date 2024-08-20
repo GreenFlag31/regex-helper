@@ -68,6 +68,8 @@ Feel free! [Open a ticket](https://github.com/GreenFlag31/regex-helper/issues).
 
 ## Changelog
 
+V0.0.2: Improved typescript return type of the results.
+
 ## Discover others libraries
 
 All libraries are permanently supported. Discover them [here](https://www.npmjs.com/~greenflag31).

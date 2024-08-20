@@ -1,6 +1,6 @@
 {
   "name": "regex-helper-ease",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "A lightweight JavaScript library that helps structure regex quickly and easily. This library does not replace learning regex but assists in their usage by removing the concrete implementation of regex and focus on results instead.",
   "keywords": [
     "Regex",

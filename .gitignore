@@ -4,7 +4,7 @@ test-results
 .vscode
 
 
-src/test.ts
+test.ts
 
 # Logs
 logs
