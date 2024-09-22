@@ -2,6 +2,7 @@
  * The data returned when info is set to "general" in the get class method. This allows you to have a general overview about the successfull regex, fails and total.
  */
 export interface General {
+  success_in_pc: number;
   success: {
     count: number;
     name: string[];
@@ -16,21 +17,23 @@ export interface General {
   };
 }
 
+export interface Spacing {
+  /**
+   * Optional spacing between words.
+   * @defaultValue true
+   */
+  optional?: boolean;
+  /**
+   * Allow you to define a custom spacing between words.
+   */
+  custom?: string;
+}
+
 /**
  * The option to pass at regex initialisation.
  */
 export interface Options {
-  spacing?: {
-    /**
-     * Optional spacing between words.
-     * @defaultValue true
-     */
-    optional?: boolean;
-    /**
-     * Allow you to define a custom spacing between words.
-     */
-    custom?: string;
-  };
+  spacing?: Spacing;
   /**
    * Flags of the regex. Possible flags are 'g' | 'i' | 'm' | 's' | 'u' | 'y'.
    * @defaultValue 'i' (insensitive)

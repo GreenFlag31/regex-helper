@@ -7,6 +7,7 @@ import {
   CapturingGroup,
   CapturingGroupWithResult,
   General,
+  Spacing,
 } from './types';
 const DEFAULT_VALUE = 'not found';
 
@@ -25,10 +26,7 @@ const defaultOptions: Options = { spacing: { optional: true }, flags: 'i' };
  * Allow you to build regex easily by providing your options.
  * @example
  * ```javascript
- * const regex = new RegexHelper({
- *    regex: `${EUFullDate}`,
- *    name: 'EUFullDate',
- * })
+ * const regex = new RegexHelper()
  *   .query({
  *      regex: `service|article :? (${anyDigits})`,
  *      name: 'articleOrService',
@@ -48,29 +46,41 @@ export class RegexHelper {
   private currentRegexIndex = 0;
   private success: General['success']['name'] = [];
 
-  constructor(
-    private readonly regexAndName = defaultRegexInit,
-    private readonly options = defaultOptions
-  ) {
-    this.init(regexAndName, options);
-    return this;
-  }
+  constructor() {}
 
   private init(regexAndName: RegexInit, options: Options) {
     const { regex } = regexAndName;
-    const sentenceWithSpacings = this.addSpacing(regex, options.spacing);
-    regexAndName.regex = sentenceWithSpacings;
+    if (!regex) return false;
+
+    options = this.setDefaultOptionsValues(options);
+    regexAndName = this.setDefaultRegexValues(regexAndName, options.spacing!);
+
     this.pushResultValue(regexAndName, options);
+    return true;
+  }
+
+  private setDefaultRegexValues(regexAndName: RegexInit, spacing: Spacing): RegexInit {
+    return Object.freeze({
+      ...defaultRegexInit,
+      ...regexAndName,
+      regex: this.addSpacing(regexAndName.regex, spacing),
+    });
+  }
+
+  private setDefaultOptionsValues(options: Options): Options {
+    return Object.freeze({
+      ...defaultOptions,
+      ...options,
+    });
   }
 
   private pushResultValue(regexAndName: RegexInit, options: Options) {
     const { name, regex, test, capturingGroup, updateNextSubQuery, valueIfNotFound } = regexAndName;
-    const { flags } = options;
 
     this.regexResults.push({
       result: '',
       regex,
-      flags: flags ?? 'i',
+      flags: options.flags ?? 'i',
       name,
       test,
       reference: '',
@@ -102,7 +112,7 @@ export class RegexHelper {
     currentRegex.result = value;
   }
 
-  private addSpacing(sentence: string, optionSpacing = defaultOptions.spacing!) {
+  private addSpacing(sentence: string, optionSpacing: Spacing) {
     const { optional, custom } = optionSpacing;
     const spacing = optional ? optionalSpacings : spacings;
     const customOrSpacing = custom || spacing;
@@ -115,8 +125,10 @@ export class RegexHelper {
   /**
    * Allow you to build a new search based on the provided data.
    */
-  query(regexAndName = defaultRegexInit, options = defaultOptions) {
-    this.init(regexAndName, options);
+  query(regexAndName: RegexInit, options = defaultOptions) {
+    const init = this.init(regexAndName, options);
+    if (!init) return this;
+
     this.currentRegexIndex += 1;
     return this;
   }
@@ -126,9 +138,7 @@ export class RegexHelper {
    */
   findIn(text: string) {
     if (!text) {
-      throw new Error(
-        `<RegexHelper>: \x1b[31mSearching skipped, the text provided is not defined.\x1b[0m`
-      );
+      throw new Error('<RegexHelper>: Searching skipped, the text provided is empty or undefined.');
     }
 
     this.success = [];
@@ -196,12 +206,14 @@ export class RegexHelper {
     const total = allRegex.length;
     const success = this.success.length;
     const fails: string[] = [];
+    const stat = Math.trunc((success / total) * 100);
 
     for (const regex of allRegex) {
       if (!this.success.includes(regex)) fails.push(regex);
     }
 
     const general: General = {
+      success_in_pc: stat,
       success: {
         count: success,
         name: this.success,
@@ -295,7 +307,7 @@ export class RegexHelper {
       }
     } catch (error) {
       const { name } = this.regexResults[this.currentRegexIndex];
-      throw new Error(`<RegexHelper>: \x1b[31mFailed to build Regex at: ${name}. ${error}`);
+      throw new Error(`<RegexHelper>: Failed to build Regex at: ${name}. ${error}`);
     }
   }
 
@@ -310,7 +322,7 @@ export class RegexHelper {
 
     if (test) {
       const isPresent = regex.test(reference);
-      result = [isPresent.toString()];
+      result = [isPresent === false ? '' : isPresent.toString()];
     }
 
     const resultValue = flags.includes('g') ? result : result?.[0];
@@ -341,12 +353,12 @@ export class RegexHelper {
     const capturingGroup = regexResult.capturingGroup || [];
     const { flags, name, test } = regexResult;
     if (flags.includes('g') && capturingGroup.length) {
-      console.warn(
-        `<RegexHelper>: \x1b[31mCannot update capture group with the global flag at Regex: ${name}. Remove the global flag to use capture group.\x1b[0m`
+      throw new Error(
+        `<RegexHelper>: Cannot update capture group with the global flag at Regex: ${name}. Remove the global flag to use capture group.`
       );
     } else if (test && capturingGroup.length) {
-      console.warn(
-        `<RegexHelper>: \x1b[31mCannot update capture group with the testing option enabled at Regex: ${name}. Remove the testing option to use capture group.\x1b[0m`
+      throw new Error(
+        `<RegexHelper>: Cannot update capture group with the testing option enabled at Regex: ${name}. Remove the testing option to use capture group.`
       );
     }
 
@@ -383,14 +395,13 @@ export class RegexHelper {
     }
 
     if (Array.isArray(resultValue) && resultValue.length > 1 && nextSubQuery && updateNext) {
-      console.warn(
-        `<RegexHelper>: \x1b[31mCannot update the reference of a subquery with the global flag in Regex: ${
+      throw new Error(
+        `<RegexHelper>: Cannot update the reference of a subquery with the global flag in Regex: ${
           currentRegex.name
         }. The values found are multiple: ${JSON.stringify(
           resultValue
-        )}. A value must be single to build a new Regex on it.\x1b[0m`
+        )}. A value must be single to build a new Regex on it.`
       );
-      return;
     }
 
     if (nextSubQuery) {
@@ -400,7 +411,7 @@ export class RegexHelper {
   }
 
   private updateSubQuery(subQuery: QueryRegexData) {
-    const current = this.getCurrentRegexResult();
+    const current = this.regexResults[this.currentRegexIndex - 1];
     current.subQuery.push(subQuery);
   }
 
@@ -418,10 +429,11 @@ export class RegexHelper {
    * Allow you to perform a subQuery, identical to a new query. A subQuery belongs to a query and is generally used to perform a new query based the result of its parent query. SubQueries can form a chain of more complex queries. A query can have zero to unlimited subQueries.
    * @example
    * ```javascript
-   * const regex = new RegexHelper({
-   *   regex: `invoice number: ${anyDigits}`,
-   *   name: 'invoice',
-   * })
+   * const regex = new RegexHelper()
+   *  .query({
+   *      regex: `invoice number: ${anyDigits}`,
+   *      name: 'invoice',
+   *   })
    *  .subQuery({
    *    regex: `${anyDigits}$`,
    *    name: 'invoiceNumber',
@@ -430,15 +442,17 @@ export class RegexHelper {
    * .get('data');
    * ```
    */
-  subQuery(regexAndName: RegexInit = defaultRegexInit, options: Options = defaultOptions) {
+  subQuery(regexAndName: RegexInit, options = defaultOptions) {
     const { name, regex, test, capturingGroup, updateNextSubQuery, valueIfNotFound } = regexAndName;
-    const { flags } = options;
-    const sentenceWithSpacings = this.addSpacing(regex, options.spacing);
+    if (!regex) return this;
+
+    options = this.setDefaultOptionsValues(options);
+    regexAndName = this.setDefaultRegexValues(regexAndName, options.spacing!);
 
     const subQuery: QueryRegexData = {
       result: name,
-      regex: sentenceWithSpacings,
-      flags: flags ?? 'i',
+      regex,
+      flags: options.flags ?? 'i',
       capturingGroup: this.initGroupCapture(capturingGroup),
       valueIfNotFound,
       updateNextSubQuery: updateNextSubQuery ?? true,

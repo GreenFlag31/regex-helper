@@ -19,14 +19,15 @@ Find the complete documentation [here](https://greenflag31.github.io/regex-helpe
 ## Example
 
 ```javascript
-const regex = new RegexHelper({
-  // pre build regex (dd/mm/yyyy)
-  regex: `${EUFullDate}`,
-  // the name of your regex
-  name: 'fullDate',
-  // text to display if no value has been found
-  valueIfNotFound: 'Date not found',
-})
+const regex = new RegexHelper()
+  .query({
+    // pre build regex (dd/mm/yyyy)
+    regex: `${EUFullDate}`,
+    // the name of your regex
+    name: 'fullDate',
+    // text to display if no value has been found
+    valueIfNotFound: 'Date not found',
+  })
   .query({
     regex: `(?:service|article) :? (${anyDigits})`,
     name: 'articleOrService',
@@ -68,7 +69,9 @@ Feel free! [Open a ticket](https://github.com/GreenFlag31/regex-helper/issues).
 
 ## Changelog
 
-V0.0.2: Improved typescript return type of the results.
+V0.0.2: [MINOR] Improved typescript return type of the results.
+
+V0.0.3: [MINOR] Escaping empty regex at initialisation and adding a general success rate in percentage in the General interface. Bug corrections and adding tests.
 
 ## Discover others libraries
 

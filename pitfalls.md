@@ -7,11 +7,7 @@ Pitfalls arise with the use of methods of antagonistic effects, ie. with the use
 ```typescript
 const text = `The article: 471 has been paid on 12/12/2022. This message has been sent to email@email.com and test@test.com...`;
 
-const regex = new RegexHelper({
-  regex: `${EUFullDate}`,
-  name: 'fullDate',
-  valueIfNotFound: 'Date not found',
-})
+const regex = new RegexHelper()
   .query(
     {
       regex: `(?:service|article) :? (${anyDigits})`,
@@ -47,11 +43,7 @@ const regex = new RegexHelper({
 If you need to perform another search, remove the global flag option and/or change your regex. If you wish to test for presence of a substring, remove the capture group or your test option.
 
 ```typescript
-const regex = new RegexHelper({
-  regex: `${EUFullDate}`,
-  name: 'fullDate',
-  valueIfNotFound: 'Date not found',
-})
+const regex = new RegexHelper()
   .query({
     regex: `(?:service|article) :? (${anyDigits})`,
     name: 'articleOrService',
