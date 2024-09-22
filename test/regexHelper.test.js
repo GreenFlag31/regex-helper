@@ -116,3 +116,20 @@ it('success should be equal to 100 percent', () => {
 
   assert.equal(result.success_in_pc, '100');
 });
+
+it('multiple values found should be an array', () => {
+  const result = new RegexHelper.RegexHelper()
+    .query(
+      {
+        regex: `Name: John Doe`,
+        name: 'fullName',
+      },
+      { flags: 'gi' }
+    )
+    .findIn(
+      'Name: John Doe, Email: john.doe@example.com. Registered successfully on 12/12/2022. Document signed with: Name: John Doe'
+    )
+    .get('data');
+
+  assert.isArray(result.fullName);
+});

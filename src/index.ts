@@ -6,6 +6,7 @@ export type {
   QueryRegexData,
   QueryRegexDataWithSubQuery,
   General,
+  Spacing,
 } from './types';
 export {
   EUFullDate,
