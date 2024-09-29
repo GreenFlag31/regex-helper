@@ -7,6 +7,10 @@ export type {
   QueryRegexDataWithSubQuery,
   General,
   Spacing,
+  Fuzzy,
+  FuzzyStat,
+  SubQueryRegexData,
+  RegexNameAndScore,
 } from './types';
 export {
   EUFullDate,

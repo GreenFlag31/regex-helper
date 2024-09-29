@@ -133,3 +133,122 @@ it('multiple values found should be an array', () => {
 
   assert.isArray(result.fullName);
 });
+
+// FUZZY SEARCH
+
+describe('Fuzzy Search Tests', () => {
+  it('a match should happen on a text with deviation where fuzzy search is enabled', () => {
+    const result = new RegexHelper.RegexHelper()
+      .query({
+        regex: `been paid`,
+        name: 'isPaid',
+        test: true,
+        fuzzy: { expression: 'been paid' },
+      })
+      .findIn('The article: 471 has been paiid on 12/12/2022.')
+      .get('data');
+
+    assert.equal(result.isPaid, 'true');
+  });
+
+  it('should find the mandat amount with fuzzy search', () => {
+    const result = new RegexHelper.RegexHelper()
+      .query({
+        regex: `total du mandat :? (\\d+)`,
+        name: 'mandat',
+        capturingGroup: [{ name: 'amount', index: 1 }],
+        fuzzy: { expression: 'total du mandat' },
+      })
+      .findIn(
+        "Le joueur incarne Iznogoud, personnage principal et antihéros, qui souhaite ardemment « devenir calife à la place du calife », et doit entamer un périple afin de trouver un « objet magique pour devenir calife » à travers une dizaine de niveaux variant de la ville à une zone herbeuse, en passant par un aquarium, une ville remplie de jouets et l'enfer. Total du manda : 87€. Il peut notamment marcher, courir, sauter sur diverses plates-formes, et se servir de trois types de projectiles, tels que les pièces d'or, pour vaincre ses ennemis."
+      )
+      .get('data');
+
+    assert.equal(result.amount, '87');
+  });
+
+  it('should find year with incorrect formed word with given delimitator', () => {
+    const result = new RegexHelper.RegexHelper()
+      .query({
+        regex: `exercice :? (\\d+)`,
+        name: 'exerciceYear',
+        capturingGroup: [{ name: 'year', index: 1 }],
+        fuzzy: { expression: 'exercice', delimitator: ':' },
+      })
+      .findIn('Total du manda : 87€. Exerciice:2024')
+      .get('data');
+
+    assert.equal(result.year, '2024');
+  });
+
+  it('should find year with incorrect formed word and in absence of given delimitator', () => {
+    const result = new RegexHelper.RegexHelper()
+      .query({
+        regex: `exercice :? (\\d+)`,
+        name: 'exerciceYear',
+        capturingGroup: [{ name: 'year', index: 1 }],
+        fuzzy: { expression: 'exercice', delimitator: ':' },
+      })
+      .findIn('Total du manda : 87€. Exerciice 2024')
+      .get('data');
+
+    assert.equal(result.year, '2024');
+  });
+
+  it('should find mandate with incorrect formed word', () => {
+    const result = new RegexHelper.RegexHelper()
+      .query({
+        regex: `mandat :? (\\d+)`,
+        name: 'mandateAmount',
+        capturingGroup: [{ name: 'amount', index: 1 }],
+        fuzzy: { expression: 'mandat', delimitator: ':' },
+      })
+      .findIn('Total du Manda : 99€. Exerciice 2024')
+      .get('data');
+
+    assert.equal(result.amount, '99');
+  });
+
+  it('should not alter the original text if score = 1', () => {
+    const text = 'Total du Mandat : 99€. Exerciice 2024';
+    const result = new RegexHelper.RegexHelper()
+      .query({
+        regex: `mandat :? (\\d+)`,
+        name: 'mandateAmount',
+        capturingGroup: [{ name: 'amount', index: 1 }],
+        fuzzy: { expression: 'mandat', delimitator: ':' },
+      })
+      .findIn(text)
+      .get('fuzzy');
+
+    assert.equal(result.originalText, text);
+  });
+
+  it('should not trigger a text replacement if score = 1', () => {
+    const result = new RegexHelper.RegexHelper()
+      .query({
+        regex: `mandat :? (\\d+)`,
+        name: 'mandateAmount',
+        capturingGroup: [{ name: 'amount', index: 1 }],
+        fuzzy: { expression: 'mandat', delimitator: ':' },
+      })
+      .findIn('Total du Mandat : 99€. Exerciice 2024')
+      .get('fuzzy');
+
+    assert.equal(result.modification, 0);
+  });
+
+  it('should find the mandat amount with misspelled mandat word', () => {
+    const result = new RegexHelper.RegexHelper()
+      .query({
+        regex: `mandat :? (\\d+)`,
+        name: 'mandateAmount',
+        capturingGroup: [{ name: 'amount', index: 1 }],
+        fuzzy: { expression: 'mandat' },
+      })
+      .findIn('Total du Maat 99€. Exerciice 2024')
+      .get('data');
+
+    assert.equal(result.amount, 99);
+  });
+});

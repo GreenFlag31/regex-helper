@@ -8,7 +8,12 @@ import {
   CapturingGroupWithResult,
   General,
   Spacing,
+  Fuzzy,
+  FuzzyStat,
+  SubQueryRegexData,
 } from './types';
+import { fuzzy } from 'fast-fuzzy';
+
 const DEFAULT_VALUE = 'not found';
 
 const defaultRegexInit: RegexInit = {
@@ -45,6 +50,7 @@ export class RegexHelper {
   private regexResults: QueryRegexDataWithSubQuery[] = [];
   private currentRegexIndex = 0;
   private success: General['success']['name'] = [];
+  private fuzzyStat: FuzzyStat = { finalText: '', modification: 0, originalText: '', records: [] };
 
   constructor() {}
 
@@ -54,6 +60,7 @@ export class RegexHelper {
 
     options = this.setDefaultOptionsValues(options);
     regexAndName = this.setDefaultRegexValues(regexAndName, options.spacing!);
+    // ajouter par défaut le seuil pour le fuzzy
 
     this.pushResultValue(regexAndName, options);
     return true;
@@ -75,7 +82,8 @@ export class RegexHelper {
   }
 
   private pushResultValue(regexAndName: RegexInit, options: Options) {
-    const { name, regex, test, capturingGroup, updateNextSubQuery, valueIfNotFound } = regexAndName;
+    const { name, regex, test, capturingGroup, updateNextSubQuery, valueIfNotFound, fuzzy } =
+      regexAndName;
 
     this.regexResults.push({
       result: '',
@@ -87,6 +95,7 @@ export class RegexHelper {
       capturingGroup: this.initGroupCapture(capturingGroup),
       updateNextSubQuery: updateNextSubQuery ?? true,
       valueIfNotFound,
+      fuzzy,
       subQuery: [],
     });
   }
@@ -144,59 +153,21 @@ export class RegexHelper {
     this.success = [];
     this.toRegex(text);
     this.trimTextHandlerAndTransformRegexToString();
+    this.fuzzyStat.originalText = text;
     return this;
   }
 
   /**
    * Get the results of your queries.
-   *
-   * @example
-   debug: gives a complete overview of the data.
-  {
-    "result": "12/12/2022",
-    "regex": "/[0-9]{2}\\/[0-9]{2}\\/[0-9]{4}/i",
-    "flags": "i",
-    "name": "EUFullDate",
-    "reference": "The article: 471 has been paid on 12/12/2022. This message has been sent to email@email.com and test... (text has been trimmed)",
-    "capturingGroup": [],
-    "updateNextSubQuery": true,
-    "subQuery": []
-  },
-  
-   data: displays only the results.
-   {
-    "EUFullDate": "12/12/2022",
-    "articleOrService": "Service type: ordinary, number: 12345, phone: +49123456578."
-   }
-  
-   general: displays a general overview.
-   {
-    "success": {
-      "count": 2,
-      "name": [
-        "EUFullDate",
-        "articleOrService"
-      ]
-    },
-    "fails": {
-      "count": 0,
-      "name": []
-    },
-    "total": {
-      "count": 2,
-      "name": [
-        "EUFullDate",
-        "articleOrService"
-      ]
-    }
-   }
    */
   get(info: 'data'): { [key: string]: string | RegExpMatchArray };
   get(info: 'general'): General;
   get(info: 'debug'): QueryRegexDataWithSubQuery[];
-  get(info: 'debug' | 'data' | 'general') {
+  get(info: 'fuzzy'): FuzzyStat;
+  get(info: 'debug' | 'data' | 'general' | 'fuzzy') {
     if (info === 'data') return this.returnOnlyData();
     if (info === 'general') return this.getGeneralInfos();
+    if (info === 'fuzzy') return this.fuzzyStat;
     return this.regexResults;
   }
 
@@ -263,11 +234,11 @@ export class RegexHelper {
   private trimTextHandlerAndTransformRegexToString() {
     for (const regexResult of this.regexResults) {
       this.trimTextResponse(regexResult);
-      regexResult.regex = regexResult.regex.toString();
+      regexResult.regex = (regexResult.regex as RegExp).source;
 
       for (const subQueryContainer of regexResult.subQuery) {
         this.trimTextResponse(subQueryContainer);
-        subQueryContainer.regex = subQueryContainer.regex.toString();
+        subQueryContainer.regex = (subQueryContainer.regex as RegExp).source;
       }
     }
   }
@@ -293,13 +264,13 @@ export class RegexHelper {
         const { flags, regex } = regexResult;
         const mainRegex = new RegExp(regex, flags);
         regexResult.regex = mainRegex;
-        this.matchOrTestRegex(regexResult, text, mainRegex);
+        this.matchOrTestRegex(regexResult, text);
 
         for (const subQueryContainer of regexResult.subQuery) {
           const { flags, regex, reference } = subQueryContainer;
           const subRegex = new RegExp(regex, flags);
           subQueryContainer.regex = subRegex;
-          this.matchOrTestRegex(subQueryContainer, reference, subRegex, subQueryIndex);
+          this.matchOrTestRegex(subQueryContainer, reference, subQueryIndex);
           subQueryIndex += 1;
         }
 
@@ -314,22 +285,67 @@ export class RegexHelper {
   private matchOrTestRegex(
     regexResult: QueryRegexDataWithSubQuery | QueryRegexData,
     reference: string,
-    regex: RegExp,
     subQueryIndex = -1
   ) {
-    const { flags, test } = regexResult;
+    const { flags, test, fuzzy, name } = regexResult;
+    const regex = regexResult.regex as RegExp;
+    const isSubQuery = subQueryIndex !== -1;
+    reference = this.fuzzySearch(fuzzy, reference, isSubQuery, name);
+
     let result = reference.match(regex);
 
     if (test) {
       const isPresent = regex.test(reference);
-      result = [isPresent === false ? '' : isPresent.toString()];
+      result = isPresent === false ? null : [isPresent.toString()];
     }
 
     const resultValue = flags.includes('g') ? result : result?.[0];
-    const isSubQuery = subQueryIndex !== -1;
     this.updateCapturingGroup(regexResult, result);
     this.updateReference(reference, resultValue || '', subQueryIndex);
     this.updateResultValue(resultValue, isSubQuery, subQueryIndex);
+  }
+
+  private fuzzySearch(
+    fuzzySearch: Fuzzy | undefined,
+    reference: string,
+    isSubQuery: boolean,
+    name: string
+  ) {
+    if (!fuzzySearch || isSubQuery) return reference;
+
+    const { expression, threshold = 0.65, delimitator = ' ' } = fuzzySearch;
+    const fuzzied = fuzzy(expression, reference, {
+      returnMatchData: true,
+    });
+
+    const { match, score } = fuzzied;
+    const { index, length } = match;
+
+    if (score === 1 || score < threshold) return reference;
+
+    const previousSpace = reference.lastIndexOf(' ', index);
+    const endOfWord = previousSpace + length;
+    const nextDelimitation = reference.indexOf(delimitator, endOfWord);
+    const nextSpace = reference.indexOf(' ', endOfWord);
+    let limit = nextDelimitation;
+
+    if (nextSpace !== -1 && (nextSpace < nextDelimitation || nextDelimitation === -1)) {
+      limit = nextSpace;
+    }
+
+    if (limit === -1 || previousSpace === -1) return reference;
+
+    const foundInOriginalText = reference.substring(previousSpace + 1, limit);
+    const replacedInReference = reference.replace(foundInOriginalText, expression);
+
+    this.fuzzyStat.modification += 1;
+    this.fuzzyStat.finalText = replacedInReference;
+    this.fuzzyStat.records.push({
+      name,
+      score,
+    });
+
+    return replacedInReference;
   }
 
   private setDefaultValueIfNotFound(
@@ -386,15 +402,15 @@ export class RegexHelper {
     const currentRegex = this.getCurrentRegexResult();
     const { subQuery, updateNextSubQuery } = currentRegex;
     const isSubQuery = subQueryIndex !== -1;
-    const nextSubQuery = subQuery[subQueryIndex + 1];
     const currentSubQuery = subQuery[subQueryIndex];
+    const isNextSubQuery = subQuery[subQueryIndex + 1];
     const updateNext = currentSubQuery ? currentSubQuery.updateNextSubQuery : updateNextSubQuery;
 
     if (!isSubQuery) {
       currentRegex.reference = reference;
     }
 
-    if (Array.isArray(resultValue) && resultValue.length > 1 && nextSubQuery && updateNext) {
+    if (Array.isArray(resultValue) && resultValue.length > 1 && isNextSubQuery && updateNext) {
       throw new Error(
         `<RegexHelper>: Cannot update the reference of a subquery with the global flag in Regex: ${
           currentRegex.name
@@ -404,9 +420,10 @@ export class RegexHelper {
       );
     }
 
-    if (nextSubQuery) {
+    if (isNextSubQuery) {
+      // Preemptively modify the next subQuery
       resultValue = Array.isArray(resultValue) ? resultValue[0] : resultValue;
-      nextSubQuery.reference = updateNext ? resultValue : reference;
+      isNextSubQuery.reference = updateNext ? resultValue : reference;
     }
   }
 
@@ -442,14 +459,14 @@ export class RegexHelper {
    * .get('data');
    * ```
    */
-  subQuery(regexAndName: RegexInit, options = defaultOptions) {
+  subQuery(regexAndName: Omit<RegexInit, 'fuzzy'>, options = defaultOptions) {
     const { name, regex, test, capturingGroup, updateNextSubQuery, valueIfNotFound } = regexAndName;
     if (!regex) return this;
 
     options = this.setDefaultOptionsValues(options);
     regexAndName = this.setDefaultRegexValues(regexAndName, options.spacing!);
 
-    const subQuery: QueryRegexData = {
+    const subQuery: SubQueryRegexData = {
       result: name,
       regex,
       flags: options.flags ?? 'i',

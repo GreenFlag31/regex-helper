@@ -73,6 +73,8 @@ V0.0.2: [MINOR] Improved typescript return type of the results.
 
 V0.0.3: [MINOR] Escaping empty regex at initialisation and adding a general success rate in percentage in the General interface. Bug corrections and adding tests.
 
+V0.0.4: [MINOR] Adding fuzzy search possibility and tests.
+
 ## Discover others libraries
 
 All libraries are permanently supported. Discover them [here](https://www.npmjs.com/~greenflag31).

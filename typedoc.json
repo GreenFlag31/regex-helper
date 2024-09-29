@@ -1,16 +1,16 @@
 {
   "entryPoints": ["src/index.ts"],
-  "projectDocuments": ["./pitfalls.md"],
+  "projectDocuments": ["./pitfalls.md", "./fuzzy-search.md"],
   "out": "docs",
-  "exclude": ["**/__tests__/**", "**/*.spec.ts", "**/node_modules/**"],
+  "exclude": ["**/test/**", "**/*.spec.ts", "**/node_modules/**"],
   "includeVersion": true,
   "name": "regex-helper-ease",
   "lang": "en",
   "excludeExternals": true,
   "excludeInternal": true,
 
-  "plugin": ["typedoc-material-theme"],
-  "themeColor": "#F0F8FF",
+  "plugin": ["typedoc-github-theme"],
+  "theme": "typedoc-github-theme",
 
   "disableSources": true,
   "hideGenerator": true
