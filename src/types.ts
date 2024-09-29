@@ -123,21 +123,21 @@ export interface Fuzzy {
   /**
    * The text expression to perform a fuzzy search on. A fuzzy search allows for approximate matching (i.e., when you are not sure of the exact text match).
    * Note: This only applies to plain text, not regular expressions.
-   * See more on fuzzy search {@link https://greenflag31.github.io/regex-helper/documents/fuzzy-search.html }
+   * See more on fuzzy search {@link https://greenflag31.github.io/regex-helper/documents/fuzzy_search.html }
    */
   expression: string;
 
   /**
    * The threshold that determines whether the fuzzy match is accepted.
    * For example, if the fuzzy search returns a match score of 0.8 and the threshold is set to 0.7, the expression will be considered a match and the part in the general text will be replaced by the expression.
-   * See more on fuzzy search {@link https://greenflag31.github.io/regex-helper/documents/fuzzy-search.html }
+   * See more on fuzzy search {@link https://greenflag31.github.io/regex-helper/documents/fuzzy_search.html }
    * @defaultValue 0.65
    */
   threshold?: number;
 
   /**
    * By default, a space is used to delimitate the complete word to replace in the original reference. Change it if you expect another structure.
-   * See more on fuzzy search {@link https://greenflag31.github.io/regex-helper/documents/fuzzy-search.html }
+   * See more on fuzzy search {@link https://greenflag31.github.io/regex-helper/documents/fuzzy_search.html }
    * @defaultValue " " (empty space)
    */
   delimitator?: string;
