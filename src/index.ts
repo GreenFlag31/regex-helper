@@ -11,6 +11,7 @@ export type {
   FuzzyStat,
   SubQueryRegexData,
   RegexNameAndScore,
+  FuzzyModifications,
 } from './types';
 export {
   EUFullDate,

@@ -2,6 +2,8 @@
 
 A lightweight JavaScript library that helps structure regex quickly and easily. This library does not replace learning regex but assists in their usage by removing the concrete implementation of regex and focus on results instead.
 
+This library supports fuzzy search, ie. it still identify misspelled words, correct them, and run the provided regex.
+
 ## Getting started
 
 ### Package installation
@@ -29,20 +31,21 @@ const regex = new RegexHelper()
     valueIfNotFound: 'Date not found',
   })
   .query({
-    regex: `(?:service|article) :? (${anyDigits})`,
-    name: 'articleOrService',
-    // this will capture the value of the first group (index: 1)
-    capturingGroup: [{ name: 'articleNumber', index: 1 }],
-  })
-  .query({
     regex: `has been paid`,
     name: 'isPaid',
     // test only for presence (returns a boolean string, "true" | "false")
     test: true,
   })
-  // the text where to perform searching
-  .findIn('The article: 471 has been paid on 12/12/2022.')
-  // can be: 'data' | 'debug' | 'general'
+  .query({
+    regex: `article :? (${anyDigits})`,
+    name: 'articleSentence',
+    // this will capture the value of the first group (index: 1)
+    capturingGroup: [{ name: 'article', index: 1 }],
+    // it searchs for the given expression 'article', allows deviation
+    fuzzy: { expression: 'article' },
+  })
+  // the text where to perform searching (with misspelled word 'artiicle').
+  .findIn('The artiicle: 471 has been paid on 12/12/2022.')
   .get('data');
 ```
 
@@ -53,8 +56,8 @@ The regex displays following results:
 ```javascript
 {
   fullDate: '12/12/2022',
-  articleOrService: 'article: 471',
-  articleNumber: '471',
+  articleSentence: 'article: 471',
+  article: '471',
   isPaid: 'true'
 }
 ```
@@ -74,6 +77,8 @@ V0.0.2: [MINOR] Improved typescript return type of the results.
 V0.0.3: [MINOR] Escaping empty regex at initialisation and adding a general success rate in percentage in the General interface. Bug corrections and adding tests.
 
 V0.0.4: [MINOR] Adding fuzzy search possibility and tests.
+
+V0.0.5: [MINOR] Improving fuzzy search and adding tests.
 
 ## Discover others libraries
 

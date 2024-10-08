@@ -12,7 +12,7 @@ import {
   FuzzyStat,
   SubQueryRegexData,
 } from './types';
-import { fuzzy } from 'fast-fuzzy';
+import { fuzzy, search, sortKind } from 'fast-fuzzy';
 
 const DEFAULT_VALUE = 'not found';
 
@@ -50,7 +50,7 @@ export class RegexHelper {
   private regexResults: QueryRegexDataWithSubQuery[] = [];
   private currentRegexIndex = 0;
   private success: General['success']['name'] = [];
-  private fuzzyStat: FuzzyStat = { finalText: '', modification: 0, originalText: '', records: [] };
+  private fuzzyStat: FuzzyStat = { modifications: [], count: 0, records: [] };
 
   constructor() {}
 
@@ -153,7 +153,6 @@ export class RegexHelper {
     this.success = [];
     this.toRegex(text);
     this.trimTextHandlerAndTransformRegexToString();
-    this.fuzzyStat.originalText = text;
     return this;
   }
 
@@ -314,38 +313,58 @@ export class RegexHelper {
     if (!fuzzySearch || isSubQuery) return reference;
 
     const { expression, threshold = 0.65, delimitator = ' ' } = fuzzySearch;
-    const fuzzied = fuzzy(expression, reference, {
+
+    const chunks = reference.match(/.{1,60}(?:\s|$)/g) || [reference];
+    const fuzziedSearch = search(expression, chunks, {
       returnMatchData: true,
     });
 
-    const { match, score } = fuzzied;
-    const { index, length } = match;
+    let replacedInText = reference;
 
-    if (score === 1 || score < threshold) return reference;
+    for (const fuzzy of fuzziedSearch) {
+      const { match, score, original } = fuzzy;
+      const { length, index } = match;
 
-    const previousSpace = reference.lastIndexOf(' ', index);
-    const endOfWord = previousSpace + length;
-    const nextDelimitation = reference.indexOf(delimitator, endOfWord);
-    const nextSpace = reference.indexOf(' ', endOfWord);
-    let limit = nextDelimitation;
+      if (score !== 1) {
+        this.fuzzyStat.records.push({
+          name,
+          score,
+          threshold,
+        });
+      }
 
-    if (nextSpace !== -1 && (nextSpace < nextDelimitation || nextDelimitation === -1)) {
-      limit = nextSpace;
+      if (score === 1 || score < threshold) continue;
+
+      const startIndex = replacedInText.indexOf(original) + index;
+      const endIndex = startIndex + length;
+
+      let nextDelimitation = replacedInText.indexOf(delimitator, endIndex);
+      if (delimitator !== ' ') {
+        // a given delimitator should start at startIndex
+        nextDelimitation = replacedInText.indexOf(delimitator, startIndex);
+      }
+
+      const nextSpace = replacedInText.indexOf(' ', endIndex);
+      let limit = nextDelimitation;
+
+      // if a space comes before the delimitation, take it
+      if (nextSpace !== -1 && (nextSpace < nextDelimitation || nextDelimitation === -1)) {
+        limit = nextSpace;
+      }
+
+      if (limit === -1 || startIndex === -1) continue;
+
+      const foundInOriginalText = replacedInText.substring(startIndex, limit).trim();
+      replacedInText = replacedInText.replace(foundInOriginalText, expression);
+
+      this.fuzzyStat.count += 1;
+      this.fuzzyStat.modifications.push({
+        original: foundInOriginalText,
+        replaced: expression,
+      });
     }
 
-    if (limit === -1 || previousSpace === -1) return reference;
-
-    const foundInOriginalText = reference.substring(previousSpace + 1, limit);
-    const replacedInReference = reference.replace(foundInOriginalText, expression);
-
-    this.fuzzyStat.modification += 1;
-    this.fuzzyStat.finalText = replacedInReference;
-    this.fuzzyStat.records.push({
-      name,
-      score,
-    });
-
-    return replacedInReference;
+    return replacedInText;
   }
 
   private setDefaultValueIfNotFound(

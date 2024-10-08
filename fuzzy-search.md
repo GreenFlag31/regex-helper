@@ -24,7 +24,9 @@ This will correctly find the word `aricle` in the text and the number of the art
 
 ## Short explanation on how it works
 
-A fuzzy search is performed on the provided text, searching for the expression with a specified threshold (defaulting to 0.65). If a match is found, the expression is replaced in the text, then the regex will be performed. The higher the threshold, the less deviation from the original text is allowed. Lowering the threshold increases flexibility but also the likelihood of false positives.
+A fuzzy search is performed on the provided text, searching for the expression with a specified threshold (defaulting to 0.65). If a match is found, the expression is replaced in the text, then the regex will be performed.
+
+The threshold is the minimum score it should obtain to accept the correction. The higher the threshold, the less deviation from the original text is allowed. Lowering the threshold increases flexibility but also the likelihood of false positives. A threshold of 1 indicates a perfect match, 0 a perfect mismatch.
 
 ## Example with optional delimitator
 
@@ -40,4 +42,4 @@ const result = new RegexHelper()
   .get('data');
 ```
 
-A fuzzy search is performed on the word `exerciice` and replace the expression in the original text. Because there is no space between the expression searched and the year, it would replaced the whole word `Exerciice:2024` if no delimitator is provided, failing to correctly find the year.
+A fuzzy search is performed on the word `exerciice` and replace the expression in the original text. Because there is no space between the expression searched and the year, it would replace the whole word `Exerciice:2024` if no delimitator is provided, failing to correctly find the year.

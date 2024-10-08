@@ -18,21 +18,26 @@ export interface General {
 }
 
 export interface FuzzyStat {
-  originalText: string;
-  finalText: string;
+  modifications: FuzzyModifications[];
   /**
    * Number of text modifications fuzzy search has done.
    */
-  modification: number;
+  count: number;
   /**
    * Store the name of the regex and its fuzzy search score. Usefull for threshold adjustement.
    */
   records: RegexNameAndScore[];
 }
 
+export interface FuzzyModifications {
+  original: string;
+  replaced: string;
+}
+
 export interface RegexNameAndScore {
   name: string;
   score: number;
+  threshold: number;
 }
 
 export interface Spacing {
