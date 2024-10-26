@@ -72,15 +72,11 @@ export interface QueryRegexData {
   test?: boolean;
   reference: string;
   capturingGroup?: CapturingGroupWithResult[];
-  updateNextSubQuery?: boolean;
   fuzzy?: Fuzzy;
-  valueIfNotFound?: any;
-}
-
-export type SubQueryRegexData = Omit<QueryRegexData, 'fuzzy'>;
-
-export interface QueryRegexDataWithSubQuery extends QueryRegexData {
-  subQuery: SubQueryRegexData[];
+  valueIfNotFound?: string;
+  countAsSuccess?: boolean;
+  possibleValues?: string[];
+  validation?: () => boolean;
 }
 
 /**
@@ -109,19 +105,31 @@ export interface RegexInit {
    */
   capturingGroup?: CapturingGroup[];
   /**
-   * Update the next subQuery with the result of the current query.
-   * @defaultValue true
-   */
-  updateNextSubQuery?: boolean;
-  /**
    * Text to be displayed if no result are found.
    * @defaultValue "not found"
    */
-  valueIfNotFound?: any;
+  valueIfNotFound?: string;
   /**
    * Allows approximate text matching based on the provided expression. Useful if a certain deviation on the text is still accepted as a match.
    */
   fuzzy?: Fuzzy;
+  /**
+   * Whether the regex should count as success in case of a successfull match.
+   * @defaultValue true
+   */
+  countAsSuccess?: boolean;
+  /**
+   * If the results are deterministic (ie. they can only take some predefined values), validation will be performed on basis of the provided value. If it fails, it will be defaulted to the `valueIfNotFound` (if provided) or the default value.
+   * @defaultValue []
+   */
+  possibleValues?: string[];
+  /**
+   * Provide a validation function that will be executed on the result found.
+   * This function should return true if validation pass, false otherwise.
+   * If validation fails, it defaults to default value.
+   * @defaultValue undefined
+   */
+  validation?: (value: any) => boolean;
 }
 
 export interface Fuzzy {
@@ -136,7 +144,7 @@ export interface Fuzzy {
    * The threshold that determines whether the fuzzy match is accepted.
    * For example, if the fuzzy search returns a match score of 0.8 and the threshold is set to 0.7, the expression will be considered a match and the part in the general text will be replaced by the expression.
    * See more on fuzzy search {@link https://greenflag31.github.io/regex-helper/documents/fuzzy_search.html }
-   * @defaultValue 0.65
+   * @defaultValue 0.75
    */
   threshold?: number;
 
@@ -149,7 +157,7 @@ export interface Fuzzy {
 }
 
 export interface CapturingGroupWithResult extends CapturingGroup {
-  result: string;
+  result: string | RegExpMatchArray;
 }
 
 export interface CapturingGroup {
@@ -165,5 +173,21 @@ export interface CapturingGroup {
    * Text to be displayed if no result are found.
    * @defaultValue "not found"
    */
-  valueIfNotFound?: any;
+  valueIfNotFound?: string;
+  /**
+   * Whether the regex should count as success in case of a successfull match.
+   * @defaultValue true
+   */
+  countAsSuccess?: boolean;
+  /**
+   * If the results are deterministic (ie. they can only take some predefined values), validation will be performed on basis of the provided value. If it fails, it will be defaulted to the `valueIfNotFound` (if provided) or the default value.
+   */
+  possibleValues?: string[];
+  /**
+   * Provide a validation function that will be executed on the result found.
+   * This function should return true if validation pass, false otherwise.
+   * If validation fails, it defaults to default value.
+   * @defaultValue undefined
+   */
+  validation?: (value: any) => boolean;
 }

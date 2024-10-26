@@ -2,7 +2,6 @@ import { optionalSpacings, spacings } from './const';
 import {
   RegexInit,
   Options,
-  QueryRegexDataWithSubQuery,
   QueryRegexData,
   CapturingGroup,
   CapturingGroupWithResult,
@@ -10,19 +9,24 @@ import {
   Spacing,
   Fuzzy,
   FuzzyStat,
-  SubQueryRegexData,
 } from './types';
-import { fuzzy, search, sortKind } from 'fast-fuzzy';
+import { search } from 'fast-fuzzy';
 
 const DEFAULT_VALUE = 'not found';
+
+const defaultOptionsInCommun = {
+  countAsSuccess: true,
+  possibleValues: [],
+};
 
 const defaultRegexInit: RegexInit = {
   regex: '',
   name: '',
   test: false,
   capturingGroup: [],
-  updateNextSubQuery: true,
   valueIfNotFound: DEFAULT_VALUE,
+  ...defaultOptionsInCommun,
+  fuzzy: { expression: '', delimitator: ' ', threshold: 0.75 },
 };
 
 const defaultOptions: Options = { spacing: { optional: true }, flags: 'i' };
@@ -47,26 +51,25 @@ const defaultOptions: Options = { spacing: { optional: true }, flags: 'i' };
  *
  */
 export class RegexHelper {
-  private regexResults: QueryRegexDataWithSubQuery[] = [];
+  private regexResults: QueryRegexData[] = [];
   private currentRegexIndex = 0;
   private success: General['success']['name'] = [];
   private fuzzyStat: FuzzyStat = { modifications: [], count: 0, records: [] };
 
   constructor() {}
 
-  private init(regexAndName: RegexInit, options: Options) {
-    const { regex } = regexAndName;
-    if (!regex) return false;
+  private init(regexInit: RegexInit, options: Options) {
+    const { regex } = regexInit;
+    if (!regex) throw new Error('<RegexHelper>: Falsy regex.');
 
     options = this.setDefaultOptionsValues(options);
-    regexAndName = this.setDefaultRegexValues(regexAndName, options.spacing!);
-    // ajouter par défaut le seuil pour le fuzzy
+    regexInit = this.setDefaultRegexValues(regexInit, options.spacing!);
 
-    this.pushResultValue(regexAndName, options);
+    this.pushResultValue(regexInit, options);
     return true;
   }
 
-  private setDefaultRegexValues(regexAndName: RegexInit, spacing: Spacing): RegexInit {
+  private setDefaultRegexValues(regexAndName: RegexInit, spacing: Spacing) {
     return Object.freeze({
       ...defaultRegexInit,
       ...regexAndName,
@@ -82,8 +85,16 @@ export class RegexHelper {
   }
 
   private pushResultValue(regexAndName: RegexInit, options: Options) {
-    const { name, regex, test, capturingGroup, updateNextSubQuery, valueIfNotFound, fuzzy } =
-      regexAndName;
+    const {
+      name,
+      regex,
+      test,
+      capturingGroup,
+      valueIfNotFound,
+      fuzzy,
+      countAsSuccess,
+      possibleValues,
+    } = regexAndName;
 
     this.regexResults.push({
       result: '',
@@ -93,30 +104,21 @@ export class RegexHelper {
       test,
       reference: '',
       capturingGroup: this.initGroupCapture(capturingGroup),
-      updateNextSubQuery: updateNextSubQuery ?? true,
       valueIfNotFound,
       fuzzy,
-      subQuery: [],
+      countAsSuccess,
+      possibleValues,
     });
   }
 
-  private updateResultValue(
-    value: string | RegExpMatchArray | null | undefined,
-    subQuery = false,
-    subQueryIteration = -1
-  ) {
+  private updateResultValue(value: string | RegExpMatchArray | null | undefined) {
     const currentRegex = this.getCurrentRegexResult();
-    const currentSubQuery = currentRegex.subQuery[subQueryIteration];
     value = this.setDefaultValueIfNotFound(
       value,
-      subQuery ? currentSubQuery.valueIfNotFound : currentRegex.valueIfNotFound,
-      subQuery ? currentSubQuery.name : currentRegex.name
+      currentRegex.valueIfNotFound,
+      currentRegex.name,
+      currentRegex
     );
-
-    if (subQuery) {
-      currentSubQuery.result = value;
-      return;
-    }
 
     currentRegex.result = value;
   }
@@ -135,8 +137,7 @@ export class RegexHelper {
    * Allow you to build a new search based on the provided data.
    */
   query(regexAndName: RegexInit, options = defaultOptions) {
-    const init = this.init(regexAndName, options);
-    if (!init) return this;
+    this.init(regexAndName, options);
 
     this.currentRegexIndex += 1;
     return this;
@@ -161,26 +162,22 @@ export class RegexHelper {
    */
   get(info: 'data'): { [key: string]: string | RegExpMatchArray };
   get(info: 'general'): General;
-  get(info: 'debug'): QueryRegexDataWithSubQuery[];
+  get(info: 'debug'): QueryRegexData[];
   get(info: 'fuzzy'): FuzzyStat;
   get(info: 'debug' | 'data' | 'general' | 'fuzzy') {
     if (info === 'data') return this.returnOnlyData();
     if (info === 'general') return this.getGeneralInfos();
     if (info === 'fuzzy') return this.fuzzyStat;
+
     return this.regexResults;
   }
 
   private getGeneralInfos() {
-    const data = this.returnOnlyData();
-    const allRegex = Object.keys(data);
-    const total = allRegex.length;
     const success = this.success.length;
-    const fails: string[] = [];
-    const stat = Math.trunc((success / total) * 100);
-
-    for (const regex of allRegex) {
-      if (!this.success.includes(regex)) fails.push(regex);
-    }
+    const failsName = this.failingRegex();
+    const failsTotal = failsName.length;
+    const total = success + failsTotal;
+    const stat = Math.trunc((success / total) * 100) || 0;
 
     const general: General = {
       success_in_pc: stat,
@@ -189,32 +186,46 @@ export class RegexHelper {
         name: this.success,
       },
       fails: {
-        count: fails.length,
-        name: fails,
+        count: failsName.length,
+        name: failsName,
       },
       total: {
         count: total,
-        name: allRegex,
+        name: this.success.concat(failsName),
       },
     };
 
     return general;
   }
 
+  private getFails(name: string, countAsSuccess: boolean | undefined) {
+    return !this.success.includes(name) && Boolean(countAsSuccess) ? name : undefined;
+  }
+
+  private failingRegex() {
+    const fails: (string | undefined)[] = [];
+
+    for (const result of this.regexResults) {
+      const { capturingGroup = [], name, countAsSuccess } = result;
+      fails.push(this.getFails(name, countAsSuccess));
+
+      for (const group of capturingGroup) {
+        const { name, countAsSuccess } = group;
+        fails.push(this.getFails(name, countAsSuccess));
+      }
+    }
+
+    return fails.filter((fail) => fail !== undefined);
+  }
+
   private returnOnlyData() {
     const data: { [key: string]: string | RegExpMatchArray } = {};
 
     for (const result of this.regexResults) {
-      const { name, subQuery, capturingGroup } = result;
+      const { name, capturingGroup } = result;
       data[name] = result.result;
 
       this.displayCapturingGroupResults(data, capturingGroup);
-
-      for (const sub of subQuery) {
-        const { name, capturingGroup } = sub;
-        data[name] = sub.result;
-        this.displayCapturingGroupResults(data, capturingGroup);
-      }
     }
 
     return data;
@@ -234,15 +245,10 @@ export class RegexHelper {
     for (const regexResult of this.regexResults) {
       this.trimTextResponse(regexResult);
       regexResult.regex = (regexResult.regex as RegExp).source;
-
-      for (const subQueryContainer of regexResult.subQuery) {
-        this.trimTextResponse(subQueryContainer);
-        subQueryContainer.regex = (subQueryContainer.regex as RegExp).source;
-      }
     }
   }
 
-  private trimTextResponse(regexResult: QueryRegexDataWithSubQuery | QueryRegexData) {
+  private trimTextResponse(regexResult: QueryRegexData) {
     const {
       reference: { length },
     } = regexResult;
@@ -255,23 +261,13 @@ export class RegexHelper {
 
   private toRegex(text: string) {
     this.currentRegexIndex = 0;
-    let subQueryIndex = 0;
 
     try {
       for (const regexResult of this.regexResults) {
-        subQueryIndex = 0;
         const { flags, regex } = regexResult;
         const mainRegex = new RegExp(regex, flags);
         regexResult.regex = mainRegex;
         this.matchOrTestRegex(regexResult, text);
-
-        for (const subQueryContainer of regexResult.subQuery) {
-          const { flags, regex, reference } = subQueryContainer;
-          const subRegex = new RegExp(regex, flags);
-          subQueryContainer.regex = subRegex;
-          this.matchOrTestRegex(subQueryContainer, reference, subQueryIndex);
-          subQueryIndex += 1;
-        }
 
         this.currentRegexIndex += 1;
       }
@@ -281,39 +277,30 @@ export class RegexHelper {
     }
   }
 
-  private matchOrTestRegex(
-    regexResult: QueryRegexDataWithSubQuery | QueryRegexData,
-    reference: string,
-    subQueryIndex = -1
-  ) {
+  private matchOrTestRegex(regexResult: QueryRegexData, reference: string) {
     const { flags, test, fuzzy, name } = regexResult;
     const regex = regexResult.regex as RegExp;
-    const isSubQuery = subQueryIndex !== -1;
-    reference = this.fuzzySearch(fuzzy, reference, isSubQuery, name);
+    reference = this.fuzzySearch(fuzzy, reference, name);
 
     let result = reference.match(regex);
 
     if (test) {
       const isPresent = regex.test(reference);
-      result = isPresent === false ? null : [isPresent.toString()];
+      result = !isPresent ? null : [isPresent.toString()];
     }
 
     const resultValue = flags.includes('g') ? result : result?.[0];
+    this.updateReference(reference);
+    this.updateResultValue(resultValue);
     this.updateCapturingGroup(regexResult, result);
-    this.updateReference(reference, resultValue || '', subQueryIndex);
-    this.updateResultValue(resultValue, isSubQuery, subQueryIndex);
   }
 
-  private fuzzySearch(
-    fuzzySearch: Fuzzy | undefined,
-    reference: string,
-    isSubQuery: boolean,
-    name: string
-  ) {
-    if (!fuzzySearch || isSubQuery) return reference;
+  private fuzzySearch(fuzzySearch: Fuzzy | undefined, reference: string, name: string) {
+    if (!fuzzySearch?.expression) return reference;
 
-    const { expression, threshold = 0.65, delimitator = ' ' } = fuzzySearch;
+    const { expression, threshold = 0.75, delimitator = ' ' } = fuzzySearch;
 
+    reference = reference.replace(/\n/g, ' ');
     const chunks = reference.match(/.{1,60}(?:\s|$)/g) || [reference];
     const fuzziedSearch = search(expression, chunks, {
       returnMatchData: true,
@@ -333,9 +320,14 @@ export class RegexHelper {
         });
       }
 
-      if (score === 1 || score < threshold) continue;
+      if (score < threshold) continue;
 
-      const startIndex = replacedInText.indexOf(original) + index;
+      const originalPosition = replacedInText.indexOf(original);
+
+      // possiblement non trouvé à cause d'effet de bord?
+      if (originalPosition === -1) continue;
+
+      const startIndex = originalPosition + index;
       const endIndex = startIndex + length;
 
       let nextDelimitation = replacedInText.indexOf(delimitator, endIndex);
@@ -344,6 +336,7 @@ export class RegexHelper {
         nextDelimitation = replacedInText.indexOf(delimitator, startIndex);
       }
 
+      const previousSpace = replacedInText.lastIndexOf(' ', startIndex);
       const nextSpace = replacedInText.indexOf(' ', endIndex);
       let limit = nextDelimitation;
 
@@ -354,12 +347,25 @@ export class RegexHelper {
 
       if (limit === -1 || startIndex === -1) continue;
 
-      const foundInOriginalText = replacedInText.substring(startIndex, limit).trim();
-      replacedInText = replacedInText.replace(foundInOriginalText, expression);
+      let wordFound = replacedInText.substring(previousSpace, limit).trim();
+
+      const ponctuation = new RegExp(/[.,:;!?]/);
+      const lastChar = wordFound.at(-1) || '';
+      if (delimitator === ' ' && ponctuation.test(lastChar)) {
+        // do not remove ponctuation
+        wordFound = wordFound.substring(0, wordFound.length - 1);
+      }
+
+      if (wordFound.toLowerCase() === expression) continue;
+
+      // rejecting a word of 3 char. bigger (arbitrary limit)
+      if (wordFound.length > expression.length + 2) continue;
+
+      replacedInText = replacedInText.replace(wordFound, expression);
 
       this.fuzzyStat.count += 1;
       this.fuzzyStat.modifications.push({
-        original: foundInOriginalText,
+        original: wordFound,
         replaced: expression,
       });
     }
@@ -368,136 +374,96 @@ export class RegexHelper {
   }
 
   private setDefaultValueIfNotFound(
-    currentValue: string | RegExpMatchArray | undefined | null,
-    customDefaultValue: string | undefined,
-    currentRegexName: string
+    currentValue: string | string[] | RegExpMatchArray | undefined | null,
+    customDefaultValue = DEFAULT_VALUE,
+    currentRegexName: string,
+    currentRegex: QueryRegexData | CapturingGroupWithResult
   ) {
-    if (Array.isArray(currentValue) && currentValue.length > 0) {
-      this.success.push(currentRegexName);
-    } else if (!Array.isArray(currentValue) && currentValue) {
-      this.success.push(currentRegexName);
-    } else currentValue = customDefaultValue ?? DEFAULT_VALUE;
+    const { countAsSuccess, possibleValues, validation } = currentRegex;
+    const currentValueToArray = Array.isArray(currentValue) ? currentValue : [currentValue];
+    const predefinedValues = possibleValues || [];
 
-    return currentValue;
+    if (!currentValueToArray[0]) return customDefaultValue;
+
+    if (typeof validation === 'function') {
+      const validated = validation(currentValue);
+
+      if (!validated) return customDefaultValue;
+    }
+
+    if (predefinedValues.length > 0) {
+      const notIncluded = currentValueToArray.every((value) => !predefinedValues.includes(value!));
+
+      if (notIncluded) return customDefaultValue;
+    }
+
+    if (!countAsSuccess) return currentValue as string | RegExpMatchArray;
+
+    this.success.push(currentRegexName);
+    return currentValue as string | RegExpMatchArray;
   }
 
-  private updateCapturingGroup(
-    regexResult: QueryRegexDataWithSubQuery | QueryRegexData,
-    result: RegExpMatchArray | null
-  ) {
+  private updateCapturingGroup(regexResult: QueryRegexData, results: RegExpMatchArray | null) {
     const capturingGroup = regexResult.capturingGroup || [];
-    const { flags, name, test } = regexResult;
-    if (flags.includes('g') && capturingGroup.length) {
-      throw new Error(
-        `<RegexHelper>: Cannot update capture group with the global flag at Regex: ${name}. Remove the global flag to use capture group.`
-      );
-    } else if (test && capturingGroup.length) {
-      throw new Error(
-        `<RegexHelper>: Cannot update capture group with the testing option enabled at Regex: ${name}. Remove the testing option to use capture group.`
-      );
+    const { name, test } = regexResult;
+    if (test && capturingGroup.length) {
+      const text = `Cannot update capture group with the testing option enabled at Regex: ${name}. Remove the testing option to use capture group.`;
+
+      throw new Error(`<RegexHelper>: ${text}`);
     }
 
     for (const group of capturingGroup) {
       const { index, name } = group;
-      const currentValue = flags.includes('g') ? '' : result?.[index];
+      const currentValue = this.capturingGroupWithGlobalFlag(results, regexResult, index);
       const value = this.setDefaultValueIfNotFound(
         currentValue,
         group.valueIfNotFound,
-        name
-      ) as string;
+        name,
+        group
+      );
+
       group.result = value;
     }
+  }
+
+  private capturingGroupWithGlobalFlag(
+    results: RegExpMatchArray | null,
+    regexResult: QueryRegexData,
+    index: number
+  ) {
+    const { flags, regex } = regexResult;
+
+    if (!flags.includes('g') || !results) return results?.[index];
+
+    const matchingResults: string[] = [];
+    for (const result of results) {
+      const { source } = regex as RegExp;
+      const flagWithoutGlobal = flags.replace('g', '');
+      const regexWithoutFlags = new RegExp(source, flagWithoutGlobal);
+      const match = result.match(regexWithoutFlags);
+
+      matchingResults.push((match || '')[index]);
+    }
+
+    return matchingResults;
   }
 
   private getCurrentRegexResult() {
     return this.regexResults[this.currentRegexIndex];
   }
 
-  private updateReference(
-    reference: string,
-    resultValue: string | RegExpMatchArray,
-    subQueryIndex = -1
-  ) {
+  private updateReference(reference: string) {
     const currentRegex = this.getCurrentRegexResult();
-    const { subQuery, updateNextSubQuery } = currentRegex;
-    const isSubQuery = subQueryIndex !== -1;
-    const currentSubQuery = subQuery[subQueryIndex];
-    const isNextSubQuery = subQuery[subQueryIndex + 1];
-    const updateNext = currentSubQuery ? currentSubQuery.updateNextSubQuery : updateNextSubQuery;
-
-    if (!isSubQuery) {
-      currentRegex.reference = reference;
-    }
-
-    if (Array.isArray(resultValue) && resultValue.length > 1 && isNextSubQuery && updateNext) {
-      throw new Error(
-        `<RegexHelper>: Cannot update the reference of a subquery with the global flag in Regex: ${
-          currentRegex.name
-        }. The values found are multiple: ${JSON.stringify(
-          resultValue
-        )}. A value must be single to build a new Regex on it.`
-      );
-    }
-
-    if (isNextSubQuery) {
-      // Preemptively modify the next subQuery
-      resultValue = Array.isArray(resultValue) ? resultValue[0] : resultValue;
-      isNextSubQuery.reference = updateNext ? resultValue : reference;
-    }
-  }
-
-  private updateSubQuery(subQuery: QueryRegexData) {
-    const current = this.regexResults[this.currentRegexIndex - 1];
-    current.subQuery.push(subQuery);
+    currentRegex.reference = reference;
   }
 
   private initGroupCapture(capturingGroup: CapturingGroup[] = []) {
     const capturingWithResult: CapturingGroupWithResult[] = [];
 
     for (const group of capturingGroup) {
-      capturingWithResult.push({ ...group, result: '' });
+      capturingWithResult.push({ ...defaultOptionsInCommun, ...group, result: '' });
     }
 
     return capturingWithResult;
-  }
-
-  /**
-   * Allow you to perform a subQuery, identical to a new query. A subQuery belongs to a query and is generally used to perform a new query based the result of its parent query. SubQueries can form a chain of more complex queries. A query can have zero to unlimited subQueries.
-   * @example
-   * ```javascript
-   * const regex = new RegexHelper()
-   *  .query({
-   *      regex: `invoice number: ${anyDigits}`,
-   *      name: 'invoice',
-   *   })
-   *  .subQuery({
-   *    regex: `${anyDigits}$`,
-   *    name: 'invoiceNumber',
-   *  })
-   * .findIn('invoice number: 430 for client 0bc456 on : 12/12/2003')
-   * .get('data');
-   * ```
-   */
-  subQuery(regexAndName: Omit<RegexInit, 'fuzzy'>, options = defaultOptions) {
-    const { name, regex, test, capturingGroup, updateNextSubQuery, valueIfNotFound } = regexAndName;
-    if (!regex) return this;
-
-    options = this.setDefaultOptionsValues(options);
-    regexAndName = this.setDefaultRegexValues(regexAndName, options.spacing!);
-
-    const subQuery: SubQueryRegexData = {
-      result: name,
-      regex,
-      flags: options.flags ?? 'i',
-      capturingGroup: this.initGroupCapture(capturingGroup),
-      valueIfNotFound,
-      updateNextSubQuery: updateNextSubQuery ?? true,
-      name,
-      test,
-      reference: '',
-    };
-
-    this.updateSubQuery(subQuery);
-    return this;
   }
 }

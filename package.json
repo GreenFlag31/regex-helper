@@ -1,6 +1,6 @@
 {
   "name": "regex-helper-ease",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "description": "A lightweight JavaScript library that helps structure regex quickly and easily. This library does not replace learning regex but assists in their usage by removing the concrete implementation of regex and focus on results instead.",
   "keywords": [
     "Regex",
@@ -19,12 +19,8 @@
   "license": "MIT",
   "author": "Manu Claeys <unam31@gmail.com>",
   "main": "index.js",
-  "types": "index.d.ts",
-  "files": [
-    "**"
-  ],
   "scripts": {
-    "build": "tsc && @powershell copy './package.json' 'dist/' && @powershell copy 'README.md' 'dist/' ",
+    "build": "rimraf dist && tsc && @powershell copy './package.json' 'dist/' && @powershell copy 'README.md' 'dist/' ",
     "test": "tsc && mocha",
     "start:dev": "tsc-watch --onSuccess \"node dist/index.js\""
   },
@@ -33,6 +29,7 @@
     "@types/mocha": "^10.0.6",
     "chai": "^4.5.0",
     "mocha": "^10.7.3",
+    "rimraf": "^6.0.1",
     "ts-node": "^10.9.2",
     "tsc-watch": "^6.2.0",
     "typedoc": "^0.26.5",

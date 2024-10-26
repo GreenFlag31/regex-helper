@@ -4,12 +4,10 @@ export type {
   CapturingGroup,
   CapturingGroupWithResult,
   QueryRegexData,
-  QueryRegexDataWithSubQuery,
   General,
   Spacing,
   Fuzzy,
   FuzzyStat,
-  SubQueryRegexData,
   RegexNameAndScore,
   FuzzyModifications,
 } from './types';

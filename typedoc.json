@@ -1,6 +1,6 @@
 {
   "entryPoints": ["src/index.ts"],
-  "projectDocuments": ["./pitfalls.md", "./fuzzy-search.md"],
+  "projectDocuments": ["./fuzzy-search.md"],
   "out": "docs",
   "exclude": ["**/test/**", "**/*.spec.ts", "**/node_modules/**"],
   "includeVersion": true,
